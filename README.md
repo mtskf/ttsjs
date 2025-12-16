@@ -5,6 +5,7 @@ This Node.js script converts long text files into high-quality MP3 audio using O
 ## Features
 
 - **Smart Text Splitting**: Automatically splits large text inputs into token-safe segments
+- **Parallel Processing**: Accelerates generation with concurrent API requests (tunable via `--parallel`)
 - **Expressive Narration**: Uses warm, clear, engaging tone suitable for educational purposes
 - **Automatic Audio Merging**: Seamlessly combines audio segments using `ffmpeg`
 - **Robust Error Handling**: Automatic retry functionality for API failures
@@ -34,47 +35,56 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 ## Usage
 
-### Global Execution (Recommended)
+### Command Line Interface
+
+After installing globally, use the `tts` command with options:
 
 ```bash
-tts your_text_file.txt [options]
+tts [options] <file>
 ```
 
-### Options
+#### Arguments
+- `file`: Path to the input text file.
 
-| Option | Alias | Description | Default |
-|Params|---|---|---|
-| `--model` | `-m` | OpenAI model | `gpt-4o-mini-tts` |
-| `--voice` | `-v` | Voice (alloy, echo, fable, onyx, nova, shimmer) | `alloy` |
-| `--parallel` | `-p` | Concurrent request limit | `5` |
-| `--speed` | `-s` | Audio speed (0.25 to 4.0) | `1.0` |
-| `--help` | `-h` | Show help | |
+#### Options
+| Option | Alias | Default | Description |
+|--------|-------|---------|-------------|
+| `--model` | `-m` | `gpt-4o-mini-tts` | OpenAI TTS model to use. |
+| `--voice` | `-v` | `alloy` | Voice: `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`. |
+| `--parallel` | `-p` | `3` | Number of concurrent API requests (Parallel Processing). |
+| `--help` | `-h` | - | Display help information. |
 
-### Local Execution
+### Examples
+
+**Basic Usage:**
+```bash
+tts data/article.txt
+```
+
+**Custom Voice and Model:**
+```bash
+tts data/article.txt --voice shimmer --model tts-1-hd
+```
+
+**Faster Processing (High Parallelism):**
+```bash
+tts data/book_chapter.txt --parallel 5
+```
+
+This will generate the final merged output in the same directory as the input file:
+- `data/article_merged.mp3`
+
+## Global Installation (Development)
+
+To run the `tts` command globally from this source:
 
 ```bash
-node tts.js your_text_file.txt -m gpt-4 -v echo
+npm link
 ```
 
-## Configuration
+This symlinks the local package to your global `node_modules`.
 
-Settings are loaded in the following priority:
-1. **CLI Arguments**
-2. **`tts-config.json`** (in current directory)
-3. **Environment Variables** (`OPENAI_API_KEY`)
-4. **Defaults**
 
-### `tts-config.json` Example
-
-```json
-{
-  "model": "gpt-4",
-  "voice": "nova",
-  "tokenLimit": 2000,
-  "parallel": 10,
-  "speed": 1.25
-}
-```
 
 ## License
 
