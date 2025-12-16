@@ -13,3 +13,6 @@ All notable changes to this project will be documented in this file.
 - Global execution support via `npm link`.
 - `js-tiktoken` for robust token counting.
 - `openai` Node.js SDK integration.
+### Removed
+- Legacy Python files (`tts.py`, `venv/`).
+- Unused configuration and logs.

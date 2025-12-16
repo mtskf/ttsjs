@@ -1,59 +1,22 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-*.py.bk
-
-# Virtual environment
-venv/
-.env
-
-# Environment variables
-.env
-
-# VSCode settings
-.vscode/
-
-# PyCharm settings
-.idea/
-
-# Mac system files
-.DS_Store
-
-# Test output files
-*.log
-*.out
-*.tmp
-
-# Annotated output
-*_merged.mp3
-data/
-
-# Jupyter Notebook checkpoints (if used)
-.ipynb_checkpoints/
-
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# Python cache
-*.cache
-
-# MyPy
-.mypy_cache/
-
-# Pytest
-.cache/
-
-# Coverage reports
-htmlcov/
-.coverage
-
-# Local scripts or temp files
-local_*.py
-
-
-.agent
 # Node
 node_modules/
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# System
+.DS_Store
+
+# Output
+*_merged.mp3
+*_part*.mp3
+concat_list.txt
+
+# Editor
+.vscode/
+.idea/
+
+# Agent
+.agent/
