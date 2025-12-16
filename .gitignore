@@ -20,4 +20,5 @@ concat_list.txt
 
 # Agent
 .agent/
-tts-config.json
+
+data/
