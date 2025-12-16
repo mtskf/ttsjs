@@ -1,0 +1,26 @@
+{
+  "name": "tts-js",
+  "version": "1.0.0",
+  "description": "Node.js version of the GPT-4o Text-to-Speech tool",
+  "main": "tts.js",
+  "bin": {
+    "tts": "tts.js"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node tts.js"
+  },
+  "keywords": [
+    "tts",
+    "openai",
+    "gpt-4o",
+    "audio"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "openai": "^4.28.0",
+    "js-tiktoken": "^1.0.10"
+  }
+}
