@@ -17,30 +17,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 class TTSConfig {
-    constructor(cliOptions = {}) {
+    constructor(options = {}) {
         this.apiKey = process.env.OPENAI_API_KEY;
-
-        // Load config file if exists
-        const configPath = path.join(process.cwd(), 'tts-config.json');
-        let fileConfig = {};
-        if (fs.existsSync(configPath)) {
-            try {
-                fileConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            } catch (e) {
-                console.warn("⚠️ Failed to parse tts-config.json");
-            }
-        }
-
-        // Priority: CLI > File > Defaults
-        this.model = cliOptions.model || fileConfig.model || "gpt-4o-mini-tts";
-        this.voice = cliOptions.voice || fileConfig.voice || "alloy";
-        this.responseFormat = cliOptions.format || fileConfig.responseFormat || "mp3";
-        this.tokenLimit = parseInt(cliOptions.tokenLimit || fileConfig.tokenLimit || 1600);
-        this.maxRetries = parseInt(cliOptions.retries || fileConfig.maxRetries || 3);
-        this.retryDelay = 2000;
-        this.maxFileSize = 100 * 1024 * 1024;
-        this.parallelLimit = parseInt(cliOptions.parallel || fileConfig.parallel || 5);
-        this.speed = parseFloat(cliOptions.speed || fileConfig.speed || 1.0);
+        this.model = options.model || "gpt-4o-mini-tts";
+        this.voice = options.voice || "alloy";
+        this.responseFormat = "mp3";
+        this.tokenLimit = 1600;
+        this.maxRetries = 3;
+        this.retryDelay = 2000; // ms
+        this.maxFileSize = 100 * 1024 * 1024; // 100MB
+        this.concurrency = parseInt(options.parallel) || 3;
 
         if (!this.apiKey) {
             throw new Error("OPENAI_API_KEY environment variable is not set");
@@ -53,6 +39,11 @@ class FileValidator {
         try {
             const resolvedPath = path.resolve(filePath);
             const homeDir = process.env.HOME || process.env.USERPROFILE;
+
+            // Prevent path traversal
+            if (resolvedPath.includes('..')) {
+                 // Check if it's within allowed bounds (home dir).
+            }
 
             if (!resolvedPath.startsWith(homeDir)) {
                  return { valid: false, message: `File must be located under home directory (${homeDir})` };
@@ -108,12 +99,15 @@ class FileValidator {
 class TextProcessor {
     constructor(tokenLimit) {
         this.tokenLimit = tokenLimit;
+        // cl100k_base is used by gpt-4, gpt-3.5-turbo, etc.
         this.encoder = getEncoding("cl100k_base");
     }
 
     splitByTokens(text) {
         const parts = [];
         let current = "";
+
+        // Split by sentence delimiters.
         const sentences = text.split(/(?<=[。．！？\n])/);
 
         for (const sentence of sentences) {
@@ -155,7 +149,6 @@ class AudioSynthesizer {
             model: this.config.model,
             voice: this.config.voice,
             input: text,
-            speed: this.config.speed,
             response_format: this.config.responseFormat,
         });
 
@@ -171,8 +164,9 @@ class AudioSynthesizer {
             } catch (e) {
                 lastError = e;
                 if (attempt < this.config.maxRetries - 1) {
-                    // Silent retry logic to avoid spamming console with parallel requests
-                    // Can verify via debug logs if needed
+                    // Suppress log if we want cleaner progress bar output, or use external logger
+                    // For now, minimal logging
+                    // console.error(`⚠️ API call failed (attempt ${attempt + 1}/${this.config.maxRetries}): ${e.message}`);
                     await new Promise(resolve => setTimeout(resolve, this.config.retryDelay * (attempt + 1)));
                 }
             }
@@ -182,7 +176,7 @@ class AudioSynthesizer {
 
     async createSegment(text, index, prefix, outputDir) {
         const audioContent = await this.synthesizeWithRetry(text);
-        const partPath = path.join(outputDir, `${prefix}_part${index + 1}.${this.config.responseFormat}`);
+        const partPath = path.join(outputDir, `${prefix}_part${index + 1}.mp3`);
         fs.writeFileSync(partPath, audioContent);
         return partPath;
     }
@@ -195,6 +189,8 @@ class AudioMerger {
         try {
             const fileContent = parts.map(p => `file '${p}'`).join('\n');
             fs.writeFileSync(listFile, fileContent);
+
+            console.log("🔄 Merging audio segments...");
 
             await new Promise((resolve, reject) => {
                 const ffmpeg = spawn('ffmpeg', [
@@ -215,6 +211,8 @@ class AudioMerger {
                 });
             });
 
+            console.log(`🎧 Merged file created: ${outputPath}`);
+
         } catch (e) {
             throw new Error(`Merge error: ${e.message}`);
         } finally {
@@ -229,6 +227,17 @@ class FileCleanup {
     static removeFiles(filePaths) {
         for (const filePath of filePaths) {
             try {
+                fs.unlinkSync(filePath);
+            } catch (e) {
+                console.log(`⚠️ Failed to delete: ${filePath} (${e.message})`);
+            }
+        }
+    }
+
+    static cleanupOnError(filePaths) {
+        for (const filePath of filePaths) {
+            if (!filePath) continue;
+            try {
                 if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
             } catch (e) { /* ignore */ }
         }
@@ -236,7 +245,7 @@ class FileCleanup {
 }
 
 class TTSProcessor {
-    constructor(options) {
+    constructor(options = {}) {
         this.config = new TTSConfig(options);
         this.textProcessor = new TextProcessor(this.config.tokenLimit);
         this.synthesizer = new AudioSynthesizer(this.config);
@@ -262,51 +271,49 @@ class TTSProcessor {
             process.exit(1);
         }
 
-        console.log(`\n⚙️  Processing: ${path.basename(inputPath)}`);
-        console.log(`   Model: ${this.config.model} | Voice: ${this.config.voice} | Parallel: ${this.config.parallelLimit}`);
+        console.log(`Processing: ${path.basename(inputFile)}`);
+        console.log(`Model: ${this.config.model} | Voice: ${this.config.voice} | Parallel: ${this.config.concurrency}`);
 
         const textParts = this.textProcessor.splitByTokens(content);
-        console.log(`📚 Segments: ${textParts.length} chunks`);
+        console.log(`📚 Segments: ${textParts.length}`);
 
         const prefix = path.basename(inputPath, path.extname(inputPath));
         const outputDir = path.dirname(inputPath);
+
+        // Parallel Processing with p-limit
+        const limit = pLimit(this.config.concurrency);
         const outputParts = new Array(textParts.length);
 
         // Progress Bar
-        const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+        const bar = new cliProgress.SingleBar({
+            format: 'Generating Audio |' + '{bar}' + '| {percentage}% || {value}/{total} Segments',
+            barCompleteChar: '\u2588',
+            barIncompleteChar: '\u2591',
+            hideCursor: true
+        });
+
         bar.start(textParts.length, 0);
 
-        const limit = pLimit(this.config.parallelLimit);
-
         try {
-            const tasks = textParts.map((partText, index) => {
+            const tasks = textParts.map((partText, i) => {
                 return limit(async () => {
-                    try {
-                        const partPath = await this.synthesizeWithRetryWrapper(partText, index, prefix, outputDir);
-                        outputParts[index] = partPath; // Store in correct order
-                        bar.increment();
-                        return partPath;
-                    } catch (e) {
-                        throw new Error(`Segment ${index + 1} failed: ${e.message}`);
-                    }
+                    const partPath = await this.synthesizeWithRetryWrapper(partText, i, prefix, outputDir);
+                    outputParts[i] = partPath;
+                    bar.increment();
                 });
             });
 
             await Promise.all(tasks);
-
         } catch (e) {
             bar.stop();
             console.error(`\n❌ Failed to generate audio: ${e.message}`);
-            // Cleanup partials if needed, or leave for debug?
-            // Cleanup is safer.
-            FileCleanup.removeFiles(outputParts.filter(p => p));
+            FileCleanup.cleanupOnError(outputParts);
             process.exit(1);
         }
 
         bar.stop();
-        console.log("\n🔄 Merging audio segments...");
 
-        const mergedFile = path.join(outputDir, `${prefix}_merged.${this.config.responseFormat}`);
+        const mergedFile = path.join(outputDir, `${prefix}_merged.mp3`);
 
         try {
             await AudioMerger.mergeFiles(outputParts, mergedFile, outputDir);
@@ -317,7 +324,7 @@ class TTSProcessor {
 
         FileCleanup.removeFiles(outputParts);
 
-        console.log(`✅ Done! Saved to: ${mergedFile}\n`);
+        console.log("✅ All done!");
     }
 
     async synthesizeWithRetryWrapper(text, index, prefix, outputDir) {
@@ -329,29 +336,28 @@ async function main() {
     const program = new Command();
 
     program
-        .name('tts')
-        .description('Convert text file to speech using OpenAI API')
-        .version('2.0.0')
-        .argument('<file>', 'Input text file path')
-        .option('-m, --model <model>', 'OpenAI model', 'gpt-4o-mini-tts')
-        .option('-v, --voice <voice>', 'Voice (alloy, echo, fable, onyx, nova, shimmer)', 'alloy')
-        .option('-p, --parallel <number>', 'Concurrent request limit', '5')
-        .option('-s, --speed <number>', 'Speed (0.25 to 4.0)', '1.0')
-        .action(async (file, options) => {
-            try {
-                const processor = new TTSProcessor(options);
-                await processor.processFile(file);
-            } catch (e) {
-                if (e.message.includes("OPENAI_API_KEY")) {
-                    console.error(`❌ Configuration error: ${e.message}`);
-                } else {
-                    console.error(`❌ Unexpected error: ${e.message}`);
-                }
-                process.exit(1);
-            }
-        });
+      .name('tts')
+      .description('Convert text file to speech using OpenAI API')
+      .version('1.1.0')
+      .argument('<file>', 'Input text file path')
+      .option('-m, --model <model>', 'OpenAI model to use', 'gpt-4o-mini-tts')
+      .option('-v, --voice <voice>', 'Voice to use (alloy, echo, fable, onyx, nova, shimmer)', 'alloy')
+      .option('-p, --parallel <number>', 'Number of concurrent API requests', '3')
+      .action(async (file, options) => {
+          try {
+              const processor = new TTSProcessor(options);
+              await processor.processFile(file);
+          } catch (e) {
+              if (e.message.includes("OPENAI_API_KEY")) {
+                  console.error(`❌ Configuration error: ${e.message}`);
+              } else {
+                  console.error(`❌ Unexpected error: ${e.message}`);
+              }
+              process.exit(1);
+          }
+      });
 
-    program.parse(process.argv);
+    program.parse();
 }
 
 main();
