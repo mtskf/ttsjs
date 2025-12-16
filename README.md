@@ -36,45 +36,45 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 ### Global Execution (Recommended)
 
-After installing globally or linking:
-
 ```bash
-tts your_text_file.txt
+tts your_text_file.txt [options]
 ```
+
+### Options
+
+| Option | Alias | Description | Default |
+|Params|---|---|---|
+| `--model` | `-m` | OpenAI model | `gpt-4o-mini-tts` |
+| `--voice` | `-v` | Voice (alloy, echo, fable, onyx, nova, shimmer) | `alloy` |
+| `--parallel` | `-p` | Concurrent request limit | `5` |
+| `--speed` | `-s` | Audio speed (0.25 to 4.0) | `1.0` |
+| `--help` | `-h` | Show help | |
 
 ### Local Execution
 
 ```bash
-node tts.js your_text_file.txt
+node tts.js your_text_file.txt -m gpt-4 -v echo
 ```
-
-Example:
-
-```bash
-tts data/article.txt
-```
-
-This will generate the final merged output in the same directory as the input file:
-
-- `data/article_merged.mp3`
-
-## Global Installation (Development)
-
-To run the `tts` command globally from this source:
-
-```bash
-npm link
-```
-
-This symlinks the local package to your global `node_modules`.
 
 ## Configuration
 
-You can modify settings in `tts.js` (TTSConfig class):
+Settings are loaded in the following priority:
+1. **CLI Arguments**
+2. **`tts-config.json`** (in current directory)
+3. **Environment Variables** (`OPENAI_API_KEY`)
+4. **Defaults**
 
-- `model`: Default "gpt-4o-mini-tts"
-- `voice`: Default "alloy"
-- `tokenLimit`: Default 1600
+### `tts-config.json` Example
+
+```json
+{
+  "model": "gpt-4",
+  "voice": "nova",
+  "tokenLimit": 2000,
+  "parallel": 10,
+  "speed": 1.25
+}
+```
 
 ## License
 
