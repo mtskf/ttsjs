@@ -1,0 +1,9 @@
+{
+  "model": "gpt-4o-mini-tts",
+  "voice": "alloy",
+  "tokenLimit": 1600,
+  "maxRetries": 3,
+  "parallelLimit": 5,
+  "speed": 1.0,
+  "responseFormat": "mp3"
+}
