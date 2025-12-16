@@ -5,15 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Changed
-- **Rewrite**: Complete migration from Python to Node.js.
-- **CLI**: Renamed project to `tts-js` and updated command to `tts`.
-- **Docs**: Updated `ARCHITECTURE.md` with system diagrams and component breakdown.
-
-### Added
-- **Global Execution**: Support for `npm link` and global binary execution (`bin` entry in `package.json`).
-- **Dependencies**: `openai` (Node SDK), `js-tiktoken`, `dotenv`.
-- **Docs**: Added `docs/decisions.md` (ADR 001).
+- **v1.1.0**: CLI overhaul (`commander`), parallel processing (`p-limit`), and progress bar.
+- **v1.0.0**: Complete rewrite from Python to Node.js, utilizing `openai`, `js-tiktoken`, and `ffmpeg`.
 
 ### Removed
-- Legacy Python files (`tts.py`, `venv/`).
-- Unused configuration and logs.
+- Legacy Python implementation (`tts.py`) and unused assets.
