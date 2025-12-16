@@ -34,6 +34,16 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 ## Usage
 
+### Global Execution (Recommended)
+
+After installing globally or linking:
+
+```bash
+tts your_text_file.txt
+```
+
+### Local Execution
+
 ```bash
 node tts.js your_text_file.txt
 ```
@@ -41,12 +51,22 @@ node tts.js your_text_file.txt
 Example:
 
 ```bash
-node tts.js data/article.txt
+tts data/article.txt
 ```
 
 This will generate the final merged output in the same directory as the input file:
 
 - `data/article_merged.mp3`
+
+## Global Installation (Development)
+
+To run the `tts` command globally from this source:
+
+```bash
+npm link
+```
+
+This symlinks the local package to your global `node_modules`.
 
 ## Configuration
 
